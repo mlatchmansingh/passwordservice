@@ -52,3 +52,9 @@ Links             : {}
 ParsedHtml        : mshtml.HTMLDocumentClass
 RawContentLength  : 88
 ```
+
+## Stats
+Get the statistics for POST requests
+```
+Invoke-WebRequest -Uri http://localhost:8080/stats -Method Get
+```
