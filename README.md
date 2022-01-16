@@ -58,3 +58,10 @@ Get the statistics for POST requests
 ```
 Invoke-WebRequest -Uri http://localhost:8080/stats -Method Get
 ```
+
+## Shutdown
+To shutdown the server and prevent new requests
+```
+Invoke-WebRequest -Uri http://localhost:8080/shutdown -Method Post
+```
+This call may take some time to complete if there are in-flight requests that must complete first
