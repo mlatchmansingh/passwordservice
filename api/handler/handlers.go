@@ -16,6 +16,7 @@ type Handlers interface {
 	HashApi(w http.ResponseWriter, r *http.Request)
 	GetHashedPassword(w http.ResponseWriter, r *http.Request)
 	GetStats(w http.ResponseWriter, r *http.Request)
+	Shutdown(w http.ResponseWriter, r *http.Request)
 }
 
 type handlers struct {
@@ -110,6 +111,11 @@ func (h *handlers) GetStats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *handlers) Shutdown(w http.ResponseWriter, r *http.Request) {
+	h.passwordSvc.CloseAndWait()
+	h.errorResp(w, "OK", http.StatusOK)
 }
 
 func (h *handlers) errorResp(w http.ResponseWriter, message string, status int) {

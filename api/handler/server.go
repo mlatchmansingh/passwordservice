@@ -30,6 +30,7 @@ func (s *Server) ConfigureAndRun() {
 	mux.HandleFunc("/hash", s.handlers.HashApi)
 	mux.HandleFunc("/hash/", s.handlers.GetHashedPassword)
 	mux.HandleFunc("/stats", s.handlers.GetStats)
+	mux.HandleFunc("/shutdown", s.handlers.Shutdown)
 
 	httpServer := &http.Server{
 		Addr:        s.port,
