@@ -8,28 +8,39 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 )
 
 type Handlers interface {
 	HashApi(w http.ResponseWriter, r *http.Request)
 	GetHashedPassword(w http.ResponseWriter, r *http.Request)
+	GetStats(w http.ResponseWriter, r *http.Request)
 }
 
 type handlers struct {
 	passwordSvc app.PasswordService
+	posts       int64
+	total       int64
+	statsLock   sync.Mutex
 }
 
 func NewHandlers(ps app.PasswordService) Handlers {
 	return &handlers{
 		passwordSvc: ps,
+		posts:       0,
+		total:       0,
 	}
 }
 
 func (h *handlers) HashApi(w http.ResponseWriter, r *http.Request) {
 
+	start := time.Now()
+
 	log.Printf("HashApi handler invoked")
 	if r.Header.Get("Content-Type") != "application/json" {
 		h.errorResp(w, "Content-Type is not application/json", http.StatusUnsupportedMediaType)
+		h.calcElapsed(start)
 		return
 	}
 
@@ -37,6 +48,7 @@ func (h *handlers) HashApi(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
 		h.errorResp(w, err.Error(), http.StatusBadRequest)
+		h.calcElapsed(start)
 		return
 	}
 
@@ -44,11 +56,13 @@ func (h *handlers) HashApi(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		h.errorResp(w, err.Error(), http.StatusInternalServerError)
+		h.calcElapsed(start)
 		return
 	}
 	w.WriteHeader(http.StatusAccepted)
 	w.Header().Set("Content-Type", "text/plain")
 	w.Write([]byte(strconv.FormatInt(data.ID, 10)))
+	h.calcElapsed(start)
 }
 
 func (h *handlers) GetHashedPassword(w http.ResponseWriter, r *http.Request) {
@@ -81,6 +95,23 @@ func (h *handlers) GetHashedPassword(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func (h *handlers) GetStats(w http.ResponseWriter, r *http.Request) {
+	var resp app.PasswordStatsDTO
+
+	h.statsLock.Lock()
+	resp.NumPosts = h.posts
+	if resp.NumPosts == 0 {
+		resp.Average = 0
+	} else {
+		resp.Average = h.total / h.posts
+	}
+	h.statsLock.Unlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(resp)
+}
+
 func (h *handlers) errorResp(w http.ResponseWriter, message string, status int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -88,4 +119,13 @@ func (h *handlers) errorResp(w http.ResponseWriter, message string, status int) 
 	r["message"] = message
 	j, _ := json.Marshal(r)
 	w.Write(j)
+}
+
+func (h *handlers) calcElapsed(start time.Time) {
+	h.statsLock.Lock()
+	defer h.statsLock.Unlock()
+
+	elapsed := time.Since(start)
+	h.total += elapsed.Microseconds()
+	h.posts++
 }
