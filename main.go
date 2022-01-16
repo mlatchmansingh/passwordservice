@@ -21,7 +21,7 @@ func main() {
 
 	//
 	// Create http listner
-	server := handler.NewServer(":8000", handlerService)
+	server := handler.NewServer(":8080", handlerService)
 	//
 	// Run
 	server.ConfigureAndRun()
